@@ -1,0 +1,40 @@
+substitutions:
+  _GITHUB_OWNER: ''
+  _GITHUB_REPO: ''
+  _DISCORD_TOKEN: ''
+  _SOURCE_CHANNEL_ID: ''
+  _DESTINATION_CHANNEL_ID: ''
+
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Clean up existing resources to avoid Terraform conflicts (since we are not importing state)
+        echo "Cleaning up potential existing resources..."
+        
+        # Delete secrets if they exist
+        gcloud secrets delete discord-token --quiet || true
+        gcloud secrets delete discord-source-channel --quiet || true
+        gcloud secrets delete discord-dest-channel --quiet || true
+        
+        # Delete service account if it exists
+        gcloud iam service-accounts delete discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com --quiet || true
+        
+        echo "Cleanup complete."
+
+  - name: 'hashicorp/terraform:light'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd terraform
+        terraform init
+        terraform apply -auto-approve \
+          -var="project_id=$PROJECT_ID" \
+          -var="github_owner=${_GITHUB_OWNER}" \
+          -var="github_repo=${_GITHUB_REPO}" \
+          -var="discord_token=${_DISCORD_TOKEN}" \
+          -var="source_channel_id=${_SOURCE_CHANNEL_ID}" \
+          -var="destination_channel_id=${_DESTINATION_CHANNEL_ID}"

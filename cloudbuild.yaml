@@ -27,6 +27,8 @@ steps:
       - '1'
       - '--memory'
       - '512Mi'
+      - '--service-account'
+      - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
       - '--set-secrets'
       - 'DISCORD_TOKEN=discord-token:latest,SOURCE_CHANNEL_ID=discord-source-channel:latest,DESTINATION_CHANNEL_ID=discord-dest-channel:latest'
 
