@@ -25,6 +25,7 @@ steps:
       - '--no-allow-unauthenticated'
       - '--min-instances'
       - '1'
+      - '--no-cpu-throttling'
       - '--memory'
       - '512Mi'
       - '--service-account'

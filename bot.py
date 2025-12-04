@@ -1,5 +1,7 @@
 import os
 import discord
+import asyncio
+from aiohttp import web
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -8,16 +10,31 @@ load_dotenv()
 TOKEN = os.getenv('DISCORD_TOKEN')
 SOURCE_CHANNEL_ID = int(os.getenv('SOURCE_CHANNEL_ID', 0))
 DESTINATION_CHANNEL_ID = int(os.getenv('DESTINATION_CHANNEL_ID', 0))
+PORT = int(os.getenv('PORT', 8080))
 
 # Initialize Discord client
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
+async def health_check(request):
+    return web.Response(text="OK")
+
+async def start_server():
+    app = web.Application()
+    app.router.add_get('/', health_check)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', PORT)
+    await site.start()
+    print(f"HTTP server started on port {PORT}")
+
 @client.event
 async def on_ready():
     print(f'{client.user} has connected to Discord!')
     print(f'Mirroring from channel {SOURCE_CHANNEL_ID} to {DESTINATION_CHANNEL_ID}')
+    # Start the HTTP server when the bot is ready
+    await start_server()
 
 @client.event
 async def on_message(message):
