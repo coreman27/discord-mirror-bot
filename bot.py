@@ -28,10 +28,11 @@ async def on_ready():
     
     # Sync slash commands to the specific guild for instant updates
     try:
-        # We need to sync the tree, but since we are using Cogs, the commands are added to the tree automatically
-        # However, we specified guild=GUILD_ID in the decorators, so they are guild-specific.
-        # We can just sync the guild.
-        bot.tree.copy_global_to(guild=config.GUILD_ID) # Just in case any global commands exist
+        # 1. Sync global commands to clear any old/stale global commands (fixes duplicates)
+        await bot.tree.sync()
+        print("Global commands synced (cleared)")
+
+        # 2. Sync guild-specific commands
         await bot.tree.sync(guild=config.GUILD_ID)
         print(f"Slash commands synced to guild {config.GUILD_ID.id}")
     except Exception as e:
