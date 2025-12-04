@@ -5,6 +5,9 @@ substitutions:
   _SOURCE_CHANNEL_ID: ''
   _DESTINATION_CHANNEL_ID: ''
 
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'bash'
