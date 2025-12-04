@@ -1,5 +1,6 @@
 import os
 import discord
+from discord import app_commands
 import asyncio
 from aiohttp import web
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ PORT = int(os.getenv('PORT', 8080))
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
+tree = app_commands.CommandTree(client)
 
 async def health_check(request):
     return web.Response(text="OK")
@@ -29,10 +31,22 @@ async def start_server():
     await site.start()
     print(f"HTTP server started on port {PORT}")
 
+@tree.command(name="jeff", description="Get a summary of Jeff's features")
+async def jeff(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        "**Jeff's Features:**\n"
+        "• **Message Mirroring**: I automatically copy messages from `raiders-of-the-lost-arc` to `raiders-of-the-lost-arc-unhinged`."
+    )
+
 @client.event
 async def on_ready():
     print(f'{client.user} has connected to Discord!')
     print(f'Mirroring from channel {SOURCE_CHANNEL_ID} to {DESTINATION_CHANNEL_ID}')
+    
+    # Sync slash commands
+    await tree.sync()
+    print("Slash commands synced")
+
     # Start the HTTP server when the bot is ready
     await start_server()
 
