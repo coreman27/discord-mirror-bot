@@ -7,7 +7,12 @@ steps:
   # Terraform Apply
   - name: 'hashicorp/terraform:light'
     dir: 'terraform'
-    args: ['apply', '-auto-approve']
+    args: 
+      - 'apply'
+      - '-auto-approve'
+      - '-var=project_id=$PROJECT_ID'
+      - '-var=github_owner=coreman27'
+      - '-var=github_repo=discord-mirror-bot'
 
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
