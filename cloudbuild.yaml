@@ -46,7 +46,7 @@ steps:
       - '--service-account'
       - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
       - '--set-secrets'
-      - 'DISCORD_TOKEN=discord-token:latest,SOURCE_CHANNEL_ID=discord-source-channel:latest,DESTINATION_CHANNEL_ID=discord-dest-channel:latest'
+      - 'DISCORD_TOKEN=discord-token:latest,SOURCE_CHANNEL_ID=discord-source-channel:latest,DESTINATION_CHANNEL_ID=discord-dest-channel:latest,GEMINI_API_KEY=gemini-api-key:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/discord-mirror'
