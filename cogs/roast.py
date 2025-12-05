@@ -46,7 +46,7 @@ class Roast(commands.Cog):
         try:
             # Fetch recent chat history for context
             history = []
-            async for msg in interaction.channel.history(limit=30):
+            async for msg in interaction.channel.history(limit=100):
                 if not msg.content:
                     continue
                 history.append(f"{msg.author.display_name}: {msg.content}")
