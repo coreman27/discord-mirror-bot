@@ -27,7 +27,7 @@ class Roast(commands.Cog):
         
         if config.GEMINI_API_KEY:
             genai.configure(api_key=config.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.model = genai.GenerativeModel('gemini-2.0-flash')
         else:
             self.model = None
 
@@ -72,7 +72,7 @@ class Roast(commands.Cog):
             print(f"Error generating roast: {e}")
             # Fallback on error
             insult = random.choice(self.fallback_insults)
-            await interaction.followup.send(f"{user.mention} {insult} (AI error)")
+            await interaction.followup.send(f"{user.mention} {insult} (AI error: {str(e)})")
 
 async def setup(bot):
     await bot.add_cog(Roast(bot))
