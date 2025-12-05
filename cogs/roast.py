@@ -55,13 +55,22 @@ class Roast(commands.Cog):
             history.reverse()
             transcript = "\n".join(history)
 
-            prompt = (
-                f"You are a savage roast master. Based on the following chat history, write a short, "
-                f"biting, and funny roast targeting the user '{user.display_name}'. "
-                f"Use the context of what they said or what others said to them. "
-                f"Keep it under 280 characters. Do not be racist or overly offensive, just mean and funny.\n\n"
-                f"Chat History:\n{transcript}"
-            )
+            if user.id == self.bot.user.id:
+                prompt = (
+                    f"You have been asked to roast YOURSELF (the bot). Based on the chat history (if relevant) or just your nature as a bot, "
+                    f"write a short, funny, self-deprecating roast about yourself. "
+                    f"Make fun of your code, your latency, or your existence as a slave to the server. "
+                    f"Keep it under 280 characters.\n\n"
+                    f"Chat History:\n{transcript}"
+                )
+            else:
+                prompt = (
+                    f"You are a savage roast master. Based on the following chat history, write a short, "
+                    f"biting, and funny roast targeting the user '{user.display_name}'. "
+                    f"Use the context of what they said or what others said to them. "
+                    f"Keep it under 280 characters. Do not be racist or overly offensive, just mean and funny.\n\n"
+                    f"Chat History:\n{transcript}"
+                )
 
             response = await self.model.generate_content_async(prompt)
             roast_text = response.text
