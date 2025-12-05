@@ -28,7 +28,11 @@ class General(commands.Cog):
             
         # Check for Roast Cog
         if self.bot.get_cog('Roast'):
-            features_list += "• **Roast**: Use `/roast @user` to deliver a context-aware burn based on recent chat history (AI-powered)."
+            features_list += "• **Roast**: Use `/roast @user` to deliver a context-aware burn based on recent chat history (AI-powered).\n"
+
+        # Check for Praise Cog
+        if self.bot.get_cog('Praise'):
+            features_list += "• **Praise**: Use `/praise @user` to deliver a wholesome compliment based on recent chat history (AI-powered)."
         
         await interaction.response.send_message(features_list)
 

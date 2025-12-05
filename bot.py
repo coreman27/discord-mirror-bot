@@ -49,7 +49,8 @@ async def main():
             'cogs.aaron',
             'cogs.yappers',
             'cogs.general',
-            'cogs.roast'
+            'cogs.roast',
+            'cogs.praise'
         ]
         
         for ext in extensions:
