@@ -45,3 +45,12 @@ resource "google_secret_manager_secret_version" "dest_channel" {
   secret = google_secret_manager_secret.dest_channel.id
   secret_data = var.destination_channel_id
 }
+
+# Gemini API Key Secret (Container only - Value added manually)
+resource "google_secret_manager_secret" "gemini_api_key" {
+  secret_id = "gemini-api-key"
+  replication {
+    automatic = true
+  }
+  depends_on = [google_project_service.secretmanager]
+}

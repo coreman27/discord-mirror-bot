@@ -1,4 +1,14 @@
 steps:
+  # Terraform Init
+  - name: 'hashicorp/terraform:light'
+    dir: 'terraform'
+    args: ['init']
+
+  # Terraform Apply
+  - name: 'hashicorp/terraform:light'
+    dir: 'terraform'
+    args: ['apply', '-auto-approve']
+
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '--network=cloudbuild', '-t', 'gcr.io/$PROJECT_ID/discord-mirror', '.']
