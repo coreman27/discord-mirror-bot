@@ -43,6 +43,8 @@ steps:
       - '--no-cpu-throttling'
       - '--memory'
       - '512Mi'
+      - '--clear-env-vars'
+      - '--clear-secrets'
       - '--service-account'
       - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
       - '--set-env-vars'
