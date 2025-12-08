@@ -27,7 +27,7 @@ class Roast(commands.Cog):
         
         if config.GEMINI_API_KEY:
             genai.configure(api_key=config.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-2.0-flash')
+            self.model = genai.GenerativeModel('gemini-flash-latest')
         else:
             self.model = None
 
