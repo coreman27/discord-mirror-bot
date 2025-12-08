@@ -43,18 +43,33 @@ class Weather(commands.Cog):
         today = data['weather'][0]
         max_temp = today['maxtempF']
         min_temp = today['mintempF']
+        date_str = today['date']  # Format: YYYY-MM-DD
+        
+        # Format date as "Monday, December 8, 2025"
+        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+        formatted_date = date_obj.strftime('%A, %B %d, %Y')
         
         embed = discord.Embed(
             title=f"🌤️ Weather for {location}",
-            description=f"**{weather_desc}**",
+            description=f"**{formatted_date}**\n*{weather_desc}*",
             color=discord.Color.blue(),
             timestamp=datetime.datetime.now()
         )
         
-        embed.add_field(name="Temperature", value=f"{temp_f}°F (Feels like {feels_like_f}°F)", inline=True)
-        embed.add_field(name="High / Low", value=f"{max_temp}°F / {min_temp}°F", inline=True)
-        embed.add_field(name="Humidity", value=f"{humidity}%", inline=True)
-        embed.add_field(name="Wind", value=f"{wind_speed} mph", inline=True)
+        # Current conditions section
+        embed.add_field(
+            name="🌡️ Current Temperature", 
+            value=f"**{temp_f}°F** (Feels like {feels_like_f}°F)", 
+            inline=False
+        )
+        
+        embed.add_field(name="📈 High", value=f"{max_temp}°F", inline=True)
+        embed.add_field(name="📉 Low", value=f"{min_temp}°F", inline=True)
+        embed.add_field(name="💧 Humidity", value=f"{humidity}%", inline=True)
+        embed.add_field(name="💨 Wind", value=f"{wind_speed} mph", inline=True)
+        
+        # Add spacing
+        embed.add_field(name="\u200b", value="\u200b", inline=False)
 
         # Process hourly data for Morning, Mid-Day, Afternoon, Night
         hourly = today['hourly']
@@ -67,10 +82,10 @@ class Weather(commands.Cog):
             return None
 
         periods = [
-            ("Morning (9AM)", "900"),
-            ("Mid-Day (12PM)", "1200"),
-            ("Afternoon (3PM)", "1500"),
-            ("Night (9PM)", "2100")
+            ("🌅 Morning (9AM)", "900"),
+            ("☀️ Mid-Day (12PM)", "1200"),
+            ("🌤️ Afternoon (3PM)", "1500"),
+            ("🌙 Night (9PM)", "2100")
         ]
 
         for name, time_code in periods:
@@ -78,10 +93,10 @@ class Weather(commands.Cog):
             if forecast:
                 temp = forecast['tempF']
                 rain = forecast['chanceofrain']
-                desc = forecast['weatherDesc'][0]['value']
+                desc = forecast['weatherDesc'][0]['value'].strip()
                 embed.add_field(
                     name=name, 
-                    value=f"🌡️ {temp}°F\n💧 {rain}%\n{desc}", 
+                    value=f"**{temp}°F** • {rain}% rain\n*{desc}*", 
                     inline=True
                 )
         
@@ -119,19 +134,6 @@ class Weather(commands.Cog):
             await interaction.followup.send(embed=embed)
         else:
             await interaction.followup.send(f"Sorry, I couldn't find weather data for '{location}'. Try 'City, State'.")
-
-    @app_commands.command(name="subscribe_weather", description="Subscribe this channel to daily weather updates (Resets on bot restart)")
-    @app_commands.describe(location="City, State to subscribe to")
-    @app_commands.guilds(config.GUILD_ID)
-    async def subscribe_weather(self, interaction: discord.Interaction, location: str):
-        # Add to in-memory dictionary
-        self.scheduled_locations[location] = interaction.channel_id
-        
-        await interaction.response.send_message(
-            f"✅ Subscribed this channel to daily weather updates for **{location}** at 8:00 AM CST.\n"
-            f"⚠️ **Note:** Since I run on the cloud, this subscription will be lost if I restart or redeploy. "
-            f"Ask the developer to add it permanently if needed!"
-        )
 
 async def setup(bot):
     await bot.add_cog(Weather(bot))
