@@ -18,19 +18,3 @@ variable "github_repo" {
   description = "The GitHub repository name"
   type        = string
 }
-
-variable "discord_token" {
-  description = "The Discord Bot Token"
-  type        = string
-  sensitive   = true
-}
-
-variable "source_channel_id" {
-  description = "The Source Channel ID"
-  type        = string
-}
-
-variable "destination_channel_id" {
-  description = "The Destination Channel ID"
-  type        = string
-}

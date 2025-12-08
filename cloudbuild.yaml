@@ -1,7 +1,22 @@
 steps:
+  # Terraform Init
+  - name: 'hashicorp/terraform:light'
+    dir: 'terraform'
+    args: ['init']
+
+  # Terraform Apply
+  - name: 'hashicorp/terraform:light'
+    dir: 'terraform'
+    args: 
+      - 'apply'
+      - '-auto-approve'
+      - '-var=project_id=$PROJECT_ID'
+      - '-var=github_owner=coreman27'
+      - '-var=github_repo=discord-mirror-bot'
+
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/discord-mirror', '.']
+    args: ['build', '--network=cloudbuild', '-t', 'gcr.io/$PROJECT_ID/discord-mirror', '.']
   
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -25,10 +40,18 @@ steps:
       - '--no-allow-unauthenticated'
       - '--min-instances'
       - '1'
+      - '--no-cpu-throttling'
       - '--memory'
       - '512Mi'
+      - '--service-account'
+      - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--set-env-vars'
+      - 'SOURCE_CHANNEL_ID=1442922478434390037,DESTINATION_CHANNEL_ID=1446216130611122367,WEATHER_CHANNEL_ID=834901032273182800,ADMIN_USER_ID=313893805000753154,AEAERON_USER_ID=102249538739245056,GUILD_ID=317792867953278976'
       - '--set-secrets'
-      - 'DISCORD_TOKEN=discord-token:latest,SOURCE_CHANNEL_ID=discord-source-channel:latest,DESTINATION_CHANNEL_ID=discord-dest-channel:latest'
+      - 'DISCORD_TOKEN=discord-token:latest,GEMINI_API_KEY=gemini-api-key:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/discord-mirror'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
