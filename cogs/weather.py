@@ -104,7 +104,7 @@ class Weather(commands.Cog):
         return embed
 
     # Run daily at 8:00 AM Central Time
-    @tasks.loop(time=datetime.time(hour=8, minute=0, tzinfo=pytz.timezone('US/Central')))
+    @tasks.loop(time=datetime.time(hour=4, minute=0, tzinfo=pytz.timezone('US/Central')))
     async def daily_weather_task(self):
         print(f"Running daily weather task at {datetime.datetime.now()}")
         print(f"Scheduled locations: {self.scheduled_locations}")
