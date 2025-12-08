@@ -14,7 +14,7 @@ class Mirroring(commands.Cog):
             return
 
         # Check if the message is from the source channel
-        if message.channel.id == config.SOURCE_CHANNEL_ID:
+        if message.channel.id == config.MIRROR_SOURCE_CHANNEL_ID:
             try:
                 destination_channel = self.bot.get_channel(config.DESTINATION_CHANNEL_ID)
                 
