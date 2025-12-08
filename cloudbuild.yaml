@@ -45,8 +45,10 @@ steps:
       - '512Mi'
       - '--service-account'
       - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
+      - '--set-env-vars'
+      - 'SOURCE_CHANNEL_ID=1442922478434390037,DESTINATION_CHANNEL_ID=1446216130611122367,WEATHER_CHANNEL_ID=834901032273182800,ADMIN_USER_ID=313893805000753154,AEAERON_USER_ID=102249538739245056,GUILD_ID=317792867953278976'
       - '--set-secrets'
-      - 'DISCORD_TOKEN=discord-token:latest,SOURCE_CHANNEL_ID=discord-source-channel:latest,DESTINATION_CHANNEL_ID=discord-dest-channel:latest,GEMINI_API_KEY=gemini-api-key:latest'
+      - 'DISCORD_TOKEN=discord-token:latest,GEMINI_API_KEY=gemini-api-key:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/discord-mirror'

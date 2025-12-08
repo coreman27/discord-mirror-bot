@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import config
 import random
-import google.generativeai as genai
+from services import gemini
 
 class Roast(commands.Cog):
     def __init__(self, bot):
@@ -24,12 +24,6 @@ class Roast(commands.Cog):
             "You're the reason they put instructions on shampoo bottles.",
             "Someday you'll go far... and I hope you stay there."
         ]
-        
-        if config.GEMINI_API_KEY:
-            genai.configure(api_key=config.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-flash-latest')
-        else:
-            self.model = None
 
     @app_commands.command(name="roast", description="Deliver a context-aware burn to a user")
     @app_commands.describe(user="The user to roast")
@@ -37,7 +31,7 @@ class Roast(commands.Cog):
     async def roast(self, interaction: discord.Interaction, user: discord.Member):
         await interaction.response.defer(thinking=True)
 
-        if not self.model:
+        if not config.GEMINI_API_KEY:
             # Fallback if no API key
             insult = random.choice(self.fallback_insults)
             await interaction.followup.send(f"{user.mention} {insult} (AI unavailable, using fallback)")
@@ -72,10 +66,13 @@ class Roast(commands.Cog):
                     f"Chat History:\n{transcript}"
                 )
 
-            response = await self.model.generate_content_async(prompt)
-            roast_text = response.text
-
-            await interaction.followup.send(f"{user.mention} {roast_text}")
+            # Use the service to generate response with fallback models
+            roast_text = await gemini.generate_response(prompt)
+            
+            if roast_text:
+                await interaction.followup.send(f"{user.mention} {roast_text}")
+            else:
+                raise Exception("No response generated from any model")
 
         except Exception as e:
             print(f"Error generating roast: {e}")

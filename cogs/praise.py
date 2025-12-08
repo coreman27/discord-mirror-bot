@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import config
 import random
-import google.generativeai as genai
+from services import gemini
 
 class Praise(commands.Cog):
     def __init__(self, bot):
@@ -23,12 +23,6 @@ class Praise(commands.Cog):
             "You are enough, just as you are.",
             "You are a ray of sunshine on a cloudy day."
         ]
-        
-        if config.GEMINI_API_KEY:
-            genai.configure(api_key=config.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-flash-latest')
-        else:
-            self.model = None
 
     @app_commands.command(name="praise", description="Deliver a context-aware compliment to a user")
     @app_commands.describe(user="The user to praise")
@@ -36,7 +30,7 @@ class Praise(commands.Cog):
     async def praise(self, interaction: discord.Interaction, user: discord.Member):
         await interaction.response.defer(thinking=True)
 
-        if not self.model:
+        if not config.GEMINI_API_KEY:
             # Fallback if no API key
             compliment = random.choice(self.fallback_compliments)
             await interaction.followup.send(f"{user.mention} {compliment} (AI unavailable, using fallback)")
@@ -71,10 +65,13 @@ class Praise(commands.Cog):
                     f"Chat History:\n{transcript}"
                 )
 
-            response = await self.model.generate_content_async(prompt)
-            praise_text = response.text
-
-            await interaction.followup.send(f"{user.mention} {praise_text}")
+            # Use the service to generate response with fallback models
+            praise_text = await gemini.generate_response(prompt)
+            
+            if praise_text:
+                await interaction.followup.send(f"{user.mention} {praise_text}")
+            else:
+                raise Exception("No response generated from any model")
 
         except Exception as e:
             print(f"Error generating praise: {e}")
