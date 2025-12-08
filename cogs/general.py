@@ -18,8 +18,7 @@ class General(commands.Cog):
             features_list += FEATURES['Mirroring'] + "\n"
         
         # Check for Aaron Cog
-        aaron_cog = self.bot.get_cog('Aaron')
-        if aaron_cog:
+        if self.bot.get_cog('Aaron'):
             status = "Enabled" if aaron_cog.enabled else "Disabled"
             features_list += FEATURES['Aaron'].format(status=status) + "\n"
             

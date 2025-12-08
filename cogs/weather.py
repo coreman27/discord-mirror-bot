@@ -9,13 +9,13 @@ import pytz
 class Weather(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        # Dictionary to store scheduled locations: { "Location Name": channel_id }
-        # Note: This is in-memory only and will reset on bot restart (Cloud Run is stateless)
-        self.scheduled_locations = {
-            "Houston, Texas": config.WEATHER_CHANNEL_ID,
-            "Seattle, Washington": config.WEATHER_CHANNEL_ID,
-            "Plano, Texas": config.WEATHER_CHANNEL_ID, 
-        }
+        # List of locations to post weather for each morning
+        self.scheduled_locations = [
+            "Houston, Texas",
+            "Seattle, Washington",
+            "Winston-Salem, North Carolina",
+            "Plano, Texas"
+        ]
         self.daily_weather_task.start()
 
     def cog_unload(self):
@@ -106,21 +106,33 @@ class Weather(commands.Cog):
     # Run daily at 8:00 AM Central Time
     @tasks.loop(time=datetime.time(hour=8, minute=0, tzinfo=pytz.timezone('US/Central')))
     async def daily_weather_task(self):
-        print("Running daily weather task...")
-        for location, channel_id in self.scheduled_locations.items():
-            channel = self.bot.get_channel(channel_id)
-            if channel:
-                try:
-                    data = await self.fetch_weather(location)
-                    if data:
-                        embed = self.create_weather_embed(data, location)
-                        await channel.send(f"Good morning! Here is the weather for **{location}**:", embed=embed)
-                    else:
-                        print(f"Failed to fetch weather for {location}")
-                except Exception as e:
-                    print(f"Error sending weather for {location}: {e}")
-            else:
-                print(f"Could not find channel {channel_id} for weather")
+        print(f"Running daily weather task at {datetime.datetime.now()}")
+        print(f"Scheduled locations: {self.scheduled_locations}")
+        
+        # Get the channel once (all locations post to the same channel)
+        channel = self.bot.get_channel(config.WEATHER_CHANNEL_ID)
+        if not channel:
+            print(f"❌ Could not find weather channel {config.WEATHER_CHANNEL_ID}")
+            return
+        
+        # Loop through each location and post weather
+        for location in self.scheduled_locations:
+            print(f"Processing weather for: {location}")
+            try:
+                print(f"Fetching weather data for {location}...")
+                data = await self.fetch_weather(location)
+                if data:
+                    print(f"Creating embed for {location}...")
+                    embed = self.create_weather_embed(data, location)
+                    print(f"Sending weather message for {location}...")
+                    await channel.send(f"Good morning! Here is the weather for **{location}**:", embed=embed)
+                    print(f"✅ Successfully posted weather for {location}")
+                else:
+                    print(f"❌ Failed to fetch weather data for {location}")
+            except Exception as e:
+                print(f"❌ Error processing weather for {location}: {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
 
     @app_commands.command(name="weather", description="Check the weather for a specific location")
     @app_commands.describe(location="City, State or Zip Code")
