@@ -91,7 +91,6 @@ async def main():
         # This follows the Single Responsibility Principle - each cog handles one feature
         extensions = [
             'cogs.mirroring',   # Message forwarding between channels
-            'cogs.aaron',       # User-specific reactions
             'cogs.yappers',     # Message statistics tracking
             'cogs.general',     # General utility commands
             'cogs.roast',       # AI-powered roasting
