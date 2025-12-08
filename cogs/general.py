@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import config
+from .features import FEATURES
 
 class General(commands.Cog):
     def __init__(self, bot):
@@ -14,25 +15,29 @@ class General(commands.Cog):
         
         # Check for Mirroring Cog
         if self.bot.get_cog('Mirroring'):
-            features_list += "• **Message Mirroring**: I automatically copy messages from `raiders-of-the-lost-arc` to `raiders-of-the-lost-arc-unhinged`.\n"
+            features_list += FEATURES['Mirroring'] + "\n"
         
         # Check for Aaron Cog
         aaron_cog = self.bot.get_cog('Aaron')
         if aaron_cog:
             status = "Enabled" if aaron_cog.enabled else "Disabled"
-            features_list += f"• **Aaron React**: I react to Aaron's messages with the :HitlerDaddy: emoji. (Status: **{status}**)\n"
+            features_list += FEATURES['Aaron'].format(status=status) + "\n"
             
         # Check for Yappers Cog
         if self.bot.get_cog('Yappers'):
-            features_list += "• **Yapper Tracker**: Use `/yappers` to see who has sent the most messages recently.\n"
+            features_list += FEATURES['Yappers'] + "\n"
             
         # Check for Roast Cog
         if self.bot.get_cog('Roast'):
-            features_list += "• **Roast**: Use `/roast @user` to deliver a context-aware burn based on recent chat history (AI-powered).\n"
+            features_list += FEATURES['Roast'] + "\n"
 
         # Check for Praise Cog
         if self.bot.get_cog('Praise'):
-            features_list += "• **Praise**: Use `/praise @user` to deliver a wholesome compliment based on recent chat history (AI-powered)."
+            features_list += FEATURES['Praise'] + "\n"
+        
+        # Check for Weather Cog
+        if self.bot.get_cog('Weather'):
+            features_list += FEATURES['Weather']
         
         await interaction.response.send_message(features_list)
 
