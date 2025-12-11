@@ -16,7 +16,7 @@ class Mirroring(commands.Cog):
         # Check if the message is from the source channel
         if message.channel.id == config.MIRROR_SOURCE_CHANNEL_ID:
             try:
-                destination_channel = self.bot.get_channel(config.DESTINATION_CHANNEL_ID)
+                destination_channel = self.bot.get_channel(config.MIRROR_DEST_CHANNEL_ID)
                 
                 if destination_channel:
                     # Prepare the message content
@@ -35,7 +35,7 @@ class Mirroring(commands.Cog):
                     await destination_channel.send(content=content, files=files, embeds=message.embeds)
                     print(f"Mirrored message from {message.author.name}")
                 else:
-                    print(f"Could not find destination channel with ID {config.DESTINATION_CHANNEL_ID}")
+                    print(f"Could not find destination channel with ID {config.MIRROR_DEST_CHANNEL_ID}")
                     
             except Exception as e:
                 print(f"Error mirroring message: {e}")
