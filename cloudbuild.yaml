@@ -24,7 +24,7 @@ steps:
 
   # Deploy container to Cloud Run
   # Note: We use --no-allow-unauthenticated because this isn't a web server
-  # We use --min-instances 1 to keep it running (Discord bots need to stay connected)
+  # We use --min-instances 1 and --max-instances 1 to keep exactly 1 instance running (Discord bots need to stay connected)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -40,6 +40,8 @@ steps:
       - '--no-allow-unauthenticated'
       - '--min-instances'
       - '1'
+      - '--max-instances'
+      - '1'
       - '--no-cpu-throttling'
       - '--memory'
       - '512Mi'
@@ -48,7 +50,7 @@ steps:
       - '--remove-secrets'
       - 'SOURCE_CHANNEL_ID,DESTINATION_CHANNEL_ID,MIRROR_SOURCE_CHANNEL_ID,MIRROR_DEST_CHANNEL_ID'
       - '--set-env-vars'
-      - 'MIRROR_SOURCE_CHANNEL_ID=1442922478434390037,MIRROR_DEST_CHANNEL_ID=1446216130611122367,WEATHER_CHANNEL_ID=834901032273182800,ADMIN_USER_ID=313893805000753154,AEAERON_USER_ID=102249538739245056,GUILD_ID=317792867953278976'
+      - 'MIRROR_SOURCE_CHANNEL_ID=1442922478434390037,MIRROR_DEST_CHANNEL_ID=1446216130611122367,WEATHER_CHANNEL_ID=834901032273182800,WORDLE_CHANNEL_ID=813092906772594710,ADMIN_USER_ID=313893805000753154,AEAERON_USER_ID=102249538739245056,GUILD_ID=317792867953278976'
       - '--update-secrets'
       - 'DISCORD_TOKEN=discord-token:latest,GEMINI_API_KEY=gemini-api-key:latest'
 

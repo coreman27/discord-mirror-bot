@@ -12,7 +12,7 @@ class Weather(commands.Cog):
         # List of locations to post weather for each morning
         self.scheduled_locations = [
             "Houston, Texas",
-            "Seattle, Washington",
+            "Portland, Oregon",
             "Winston-Salem, North Carolina",
             "Plano, Texas"
         ]
@@ -24,11 +24,15 @@ class Weather(commands.Cog):
     async def fetch_weather(self, location):
         """Fetches weather data from wttr.in"""
         url = f"https://wttr.in/{location}?format=j1"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    return await response.json()
-                return None
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    return None
+        except Exception as e:
+            print(f"Error fetching weather for {location}: {e}")
+            return None
 
     def create_weather_embed(self, data, location):
         """Creates a nice embed from wttr.in JSON data"""
