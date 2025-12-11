@@ -21,9 +21,17 @@ RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}') && \
     wget -q "https://storage.googleapis.com/chrome-for-testing-public/$CHROME_VERSION/linux64/chromedriver-linux64.zip" -O /tmp/chromedriver.zip || \
     (wget -q "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$MAJOR_VERSION" -O /tmp/LATEST && \
      wget -q "https://chromedriver.storage.googleapis.com/$(cat /tmp/LATEST)/chromedriver_linux64.zip" -O /tmp/chromedriver.zip) && \
-    unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
+    unzip /tmp/chromedriver.zip -d /tmp/ && \
+    # move the extracted binary to /usr/local/bin where it will be found
+    if [ -f /tmp/chromedriver-linux64/chromedriver ]; then \
+        mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/chromedriver; \
+    elif [ -f /tmp/chromedriver ]; then \
+        mv /tmp/chromedriver /usr/local/bin/chromedriver; \
+    else \
+        echo "chromedriver binary not found after unzip"; exit 1; \
+    fi && \
     chmod +x /usr/local/bin/chromedriver && \
-    rm /tmp/chromedriver.zip
+    rm -rf /tmp/chromedriver.zip /tmp/chromedriver-linux64 /tmp/LATEST
 
 # Set environment variables for Chrome and ChromeDriver
 ENV CHROME_BIN=/usr/bin/google-chrome
