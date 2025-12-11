@@ -95,7 +95,8 @@ async def main():
             'cogs.general',     # General utility commands
             'cogs.roast',       # AI-powered roasting
             'cogs.praise',      # AI-powered compliments
-            'cogs.weather'      # Weather reports and scheduling
+            'cogs.weather',     # Weather reports and scheduling
+            'cogs.wordle'       # Wordle auto-solver with trial-and-error
         ]
         
         # INTERVIEW TOPIC: Iteration and Error Handling

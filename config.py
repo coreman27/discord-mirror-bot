@@ -25,6 +25,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')  # AI service API key
 MIRROR_SOURCE_CHANNEL_ID = int(os.getenv('MIRROR_SOURCE_CHANNEL_ID', 0))  # Channel to mirror from
 MIRROR_DEST_CHANNEL_ID = int(os.getenv('MIRROR_DEST_CHANNEL_ID', 0))  # Channel to mirror to
 WEATHER_CHANNEL_ID = int(os.getenv('WEATHER_CHANNEL_ID', 834901032273182800))  # Weather reports destination
+WORDLE_CHANNEL_ID = int(os.getenv('WORDLE_CHANNEL_ID', 813092906772594710))  # Wordle auto-solver channel
 PORT = int(os.getenv('PORT', 8080))  # HTTP server port for health checks
 
 # INTERVIEW TOPIC: Application Constants
