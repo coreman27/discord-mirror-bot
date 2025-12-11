@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
     unzip \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Google Chrome
