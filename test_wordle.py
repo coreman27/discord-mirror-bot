@@ -14,7 +14,7 @@ async def main():
     print("🎯 Starting Wordle Solver Test...")
     print("-" * 50)
 
-    solver = WordleSolver()
+    solver = WordleSolver(headless=True)
 
     # Test the solver
     result = solver.solve(max_guesses=6)
