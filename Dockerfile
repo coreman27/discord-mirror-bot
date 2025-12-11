@@ -16,7 +16,7 @@ RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor
     && rm -rf /var/lib/apt/lists/*
 
 # Install ChromeDriver (match the Chrome version)
-RUN CHROMEDRIVER_VERSION=$(curl -s https://googlechromelabs.github.io/chromedriver/latest-release) \
+RUN CHROMEDRIVER_VERSION=$(curl -s https://googlechromelabs.github.io/chromedriver/latest-release | tr -d '\n') \
     && wget -O /tmp/chromedriver.zip https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip \
     && unzip /tmp/chromedriver.zip -d /tmp/ \
     && mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/ \
