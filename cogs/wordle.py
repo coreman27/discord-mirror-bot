@@ -4,6 +4,7 @@ from discord import app_commands
 import config
 import datetime
 import pytz
+import asyncio
 
 # Import the WordleSolver
 try:
@@ -84,11 +85,20 @@ class Wordle(commands.Cog):
         
         try:
             print("Starting Wordle solver...")
-            solver = WordleSolver(headless=True)  # Run headless for server
-            success = solver.solve(max_guesses=6)
+            def _run_solver():
+                s = WordleSolver(headless=True)
+                success = s.solve(max_guesses=6)
+                share_text = None
+                if success:
+                    try:
+                        share_text = s.capture_share_results()
+                    except Exception:
+                        share_text = None
+                return success, share_text
+
+            success, share_text = await asyncio.to_thread(_run_solver)
             
             if success:
-                share_text = solver.capture_share_results()
                 if share_text:
                     await channel.send(f"{share_text}")
                     print("✅ Successfully posted Wordle result")
@@ -112,11 +122,20 @@ class Wordle(commands.Cog):
             return
         
         try:
-            solver = WordleSolver(headless=True)
-            success = solver.solve(max_guesses=6)
+            def _run_solver_cmd():
+                s = WordleSolver(headless=True)
+                success = s.solve(max_guesses=6)
+                share_text = None
+                if success:
+                    try:
+                        share_text = s.capture_share_results()
+                    except Exception:
+                        share_text = None
+                return success, share_text
+
+            success, share_text = await asyncio.to_thread(_run_solver_cmd)
             
             if success:
-                share_text = solver.capture_share_results()
                 if share_text:
                     await interaction.followup.send(f"{share_text}")
                 else:
