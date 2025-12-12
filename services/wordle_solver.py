@@ -431,8 +431,59 @@ class WordleSolver:
                     state = tile.get_attribute("data-state")
                     
                     # Get the letter from text content
-                    letter = tile.text.strip().lower()
-                    
+                    letter = (tile.text or "").strip().lower()
+
+                    # If we couldn't get the letter or state from the straightforward properties,
+                    # try several fallbacks (attributes, aria-label, innerText/innerHTML) and log
+                    # the full outerHTML for debugging in Cloud Run.
+                    if not letter or not state:
+                        # Try possible attributes that might contain the letter
+                        try:
+                            attr_letter = tile.get_attribute('data-letter') or tile.get_attribute('data-key') or tile.get_attribute('letter')
+                            if attr_letter:
+                                letter = attr_letter.strip().lower()
+                        except Exception:
+                            pass
+
+                        # Try aria-label which sometimes includes readable text
+                        if not letter:
+                            try:
+                                aria = tile.get_attribute('aria-label')
+                                if aria:
+                                    # aria-label may be like "Letter C: correct" or just the letter
+                                    import re
+                                    m = re.search(r"([A-Za-z])", aria)
+                                    if m:
+                                        letter = m.group(1).lower()
+                            except Exception:
+                                pass
+
+                        # Try executing JS to get innerText / innerHTML
+                        if not letter:
+                            try:
+                                js_text = self.driver.execute_script('return arguments[0].innerText || arguments[0].textContent || "";', tile)
+                                if js_text:
+                                    letter = js_text.strip().lower()
+                            except Exception:
+                                pass
+
+                        # Refresh state if missing
+                        if not state:
+                            try:
+                                state = tile.get_attribute('data-state') or tile.get_attribute('aria-hidden')
+                            except Exception:
+                                pass
+
+                        # If still missing, capture full outerHTML for debug logs
+                        if not letter or not state:
+                            try:
+                                outer = tile.get_attribute('outerHTML')
+                            except Exception:
+                                outer = '<unable to read outerHTML>'
+                            logger.warning(
+                                f"Tile parse failed at pos {position}: letter='{letter}' state='{state}' outerHTML={outer[:1000]}"
+                            )
+
                     if letter and state:
                         feedback.append((letter, state))
                         logger.info(f"Letter '{letter}': {state}")
