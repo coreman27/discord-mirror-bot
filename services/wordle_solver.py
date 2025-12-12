@@ -11,7 +11,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from .word_lists import COMMON_ANSWERS, WORD_LIST
@@ -55,26 +55,11 @@ class WordleSolver:
                 try:
                     import undetected_chromedriver as uc
                     options = uc.ChromeOptions()
-                    # Use newer headless mode when available
                     if self.headless:
-                        try:
-                            options.add_argument("--headless=new")
-                        except Exception:
-                            options.add_argument("--headless")
-                    # Recommended flags for headless/containerized execution
+                        options.add_argument("--headless")
                     options.add_argument("--no-sandbox")
                     options.add_argument("--disable-dev-shm-usage")
-                    options.add_argument("--disable-gpu")
-                    options.add_argument("--disable-extensions")
-                    options.add_argument("--disable-software-rasterizer")
-                    options.add_argument("--window-size=1366,768")
-                    options.add_argument("--remote-debugging-port=0")
-                    # Try launching via undetected chromedriver
-                    try:
-                        self.driver = uc.Chrome(options=options)
-                    except TypeError:
-                        # Some uc versions accept different args
-                        self.driver = uc.Chrome()
+                    self.driver = uc.Chrome(options=options)
                     logger.info("Using undetected-chromedriver")
                 except ImportError:
                     logger.warning("undetected-chromedriver not installed, using regular Chrome")
@@ -97,60 +82,9 @@ class WordleSolver:
         options.add_experimental_option('useAutomationExtension', False)
         
         try:
-            # Try to use ChromeDriverManager first (will download a matching driver)
-            try:
-                chromedriver_path = ChromeDriverManager().install()
-                # ChromeDriverManager may return a path to the binary or to a directory
-                if os.path.isdir(chromedriver_path):
-                    # search for the chromedriver executable inside the directory
-                    candidates = [
-                        os.path.join(chromedriver_path, 'chromedriver'),
-                        os.path.join(chromedriver_path, 'chromedriver-linux64', 'chromedriver'),
-                        os.path.join(chromedriver_path, 'chromedriver-win32', 'chromedriver.exe'),
-                    ]
-                    binary = None
-                    for c in candidates:
-                        if os.path.exists(c) and os.access(c, os.X_OK):
-                            binary = c
-                            break
-                    if not binary:
-                        # try any file that looks executable in the directory
-                        for root, dirs, files in os.walk(chromedriver_path):
-                            for f in files:
-                                if 'chromedriver' in f.lower():
-                                    candidate = os.path.join(root, f)
-                                    try:
-                                        os.chmod(candidate, 0o755)
-                                    except Exception:
-                                        pass
-                                    binary = candidate
-                                    break
-                            if binary:
-                                break
-                    if not binary:
-                        raise Exception(f"No chromedriver binary found in {chromedriver_path}")
-                    chromedriver_bin = binary
-                else:
-                    chromedriver_bin = chromedriver_path
-                service = Service(chromedriver_bin)
-                self.driver = webdriver.Chrome(service=service, options=options)
-            except Exception as e:
-                logger.warning(f"ChromeDriverManager failed: {e}")
-                # Fallback: if a chromedriver binary exists at a known path (e.g. in Docker)
-                fallback_paths = ["/usr/local/bin/chromedriver", "/usr/bin/chromedriver", "C:\\chromedriver.exe"]
-                found = False
-                for p in fallback_paths:
-                    try:
-                        if os.path.exists(p):
-                            service = Service(p)
-                            self.driver = webdriver.Chrome(service=service, options=options)
-                            found = True
-                            break
-                    except Exception:
-                        continue
-                if not found:
-                    # Last resort: rely on PATH to find chromedriver
-                    self.driver = webdriver.Chrome(options=options)
+            # Try to use the local Chrome installation
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=options)
         except Exception as e:
             logger.warning(f"Failed with ChromeDriverManager: {e}")
             # Fallback: try to find Chrome in common locations
@@ -729,24 +663,9 @@ class WordleSolver:
         Returns:
             True if solved within max_guesses, False otherwise
         """
-        attempts = 0
-        max_setup_attempts = 2
-        while attempts < max_setup_attempts:
-            try:
-                attempts += 1
-                self.setup_driver()
-                self.navigate_to_wordle()
-                break
-            except WebDriverException as e:
-                logger.warning(f"WebDriver setup/navigation failed (attempt {attempts}): {e}")
-                try:
-                    self.close()
-                except:
-                    pass
-                time.sleep(1)
-                if attempts >= max_setup_attempts:
-                    logger.error("Could not initialize WebDriver after multiple attempts")
-                    return False
+        try:
+            self.setup_driver()
+            self.navigate_to_wordle()
             
             # Start with a good initial word (high letter frequency)
             candidates = COMMON_ANSWERS.copy()
@@ -763,20 +682,7 @@ class WordleSolver:
                     return False
                 
                 # Get feedback from the correct row (using guess_num)
-                try:
-                    feedback = self.get_guess_feedback(guess_number=guess_num)
-                except WebDriverException as e:
-                    logger.warning(f"WebDriver disconnected while getting feedback: {e}")
-                    # Try to reinitialize the browser once
-                    try:
-                        self.close()
-                        self.setup_driver()
-                        self.navigate_to_wordle()
-                        # retry getting feedback once
-                        feedback = self.get_guess_feedback(guess_number=guess_num)
-                    except Exception as e2:
-                        logger.error(f"Retry after WebDriver error failed: {e2}")
-                        return False
+                feedback = self.get_guess_feedback(guess_number=guess_num)
                 if not feedback:
                     logger.error("Could not get feedback")
                     return False
