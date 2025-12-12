@@ -4,7 +4,6 @@ from discord import app_commands
 import config
 import datetime
 import pytz
-import asyncio
 
 # Import the WordleSolver
 try:
@@ -84,23 +83,10 @@ class Wordle(commands.Cog):
             return
         
         try:
-            print("Starting Wordle solver in background thread...")
+            print("Starting Wordle solver...")
             solver = WordleSolver(headless=True)  # Run headless for server
-            try:
-                # Run solver in a background thread to avoid blocking the event loop
-                success = await asyncio.wait_for(asyncio.to_thread(solver.solve, max_guesses=6), timeout=180)
-            except asyncio.TimeoutError:
-                await channel.send("Wordle solver timed out after 3 minutes.")
-                solver.close()
-                return
-            except Exception as e:
-                print(f"❌ Error running Wordle solver: {e}")
-                import traceback
-                traceback.print_exc()
-                await channel.send(f"Error running Wordle solver: {str(e)[:1000]}")
-                solver.close()
-                return
-
+            success = solver.solve(max_guesses=6)
+            
             if success:
                 share_text = solver.capture_share_results()
                 if share_text:
@@ -123,31 +109,21 @@ class Wordle(commands.Cog):
         
         if WordleSolver is None:
             await interaction.followup.send("Wordle solver not available.")
-            try:
-                solver = WordleSolver(headless=True)
-                try:
-                    # Run blocking solver in thread with timeout
-                    success = await asyncio.wait_for(asyncio.to_thread(solver.solve, max_guesses=6), timeout=180)
-                except asyncio.TimeoutError:
-                    await interaction.followup.send("Wordle solver timed out after 3 minutes.")
-                    solver.close()
-                    return
-                except Exception as e:
-                    await interaction.followup.send(f"Error running Wordle solver: {str(e)[:1000]}")
-                    solver.close()
-                    return
-
-                if success:
-                    share_text = solver.capture_share_results()
-                    if share_text:
-                        await interaction.followup.send(f"Wordle solved!\n{share_text}")
-                    else:
-                        await interaction.followup.send("Wordle solved, but couldn't capture the result.")
+            return
+        
+        try:
+            solver = WordleSolver(headless=True)
+            success = solver.solve(max_guesses=6)
+            
+            if success:
+                share_text = solver.capture_share_results()
+                if share_text:
+                    await interaction.followup.send(f"{share_text}")
                 else:
-                    await interaction.followup.send("Failed to solve today's Wordle within 6 guesses.")
+                    await interaction.followup.send("Wordle solved, but couldn't capture the result.")
+            else:
+                await interaction.followup.send("Failed to solve today's Wordle within 6 guesses.")
                 
-            except Exception as e:
-                await interaction.followup.send(f"Error: {str(e)[:1000]}")  # Limit length
         except Exception as e:
             await interaction.followup.send(f"Error: {str(e)[:1000]}")  # Limit length
 
