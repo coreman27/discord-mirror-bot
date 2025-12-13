@@ -46,11 +46,11 @@ resource "google_cloud_scheduler_job" "daily_wordle" {
   }
 }
 
-# Cloud Scheduler Job for daily Weather (8:00 AM Central = 1:00 PM UTC)
+# Cloud Scheduler Job for daily Weather (4:00 AM Central = 9:00 AM UTC)
 resource "google_cloud_scheduler_job" "daily_weather" {
   name            = "discord-bot-daily-weather"
-  description     = "Trigger daily weather report at 8:00 AM Central Time"
-  schedule        = "0 13 * * *"  # 1:00 PM UTC = 8:00 AM Central
+  description     = "Trigger daily weather report at 4:00 AM Central Time"
+  schedule        = "0 9 * * *"  # 9:00 AM UTC = 4:00 AM Central
   time_zone       = "UTC"
   attempt_deadline = "600s"
   region          = var.region

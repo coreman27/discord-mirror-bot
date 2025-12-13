@@ -24,15 +24,20 @@ class Weather(commands.Cog):
 
     async def fetch_weather(self, location):
         """Fetches weather data from wttr.in"""
-        url = f"https://wttr.in/{location}?format=j1"
+        import urllib.parse
+        encoded_location = urllib.parse.quote(location)
+        url = f"https://wttr.in/{encoded_location}?format=j1"
+        
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status == 200:
                         return await response.json()
-                    return None
+                    else:
+                        print(f"⚠️ Failed to fetch weather for {location}: Status {response.status}")
+                        return None
         except Exception as e:
-            print(f"Error fetching weather for {location}: {e}")
+            print(f"❌ Error fetching weather for {location}: {e}")
             return None
 
     def create_weather_embed(self, data, location):
@@ -108,7 +113,7 @@ class Weather(commands.Cog):
         embed.set_footer(text="Powered by wttr.in")
         return embed
 
-    # Run daily at 8:00 AM Central Time (called by Cloud Task via HTTP endpoint)
+    # Run daily at 4:00 AM Central Time (called by Cloud Task via HTTP endpoint)
     async def run_daily_weather(self):
         """Called by HTTP endpoint from Cloud Task scheduler"""
         print(f"Running daily weather task at {datetime.datetime.now()}")
@@ -138,6 +143,10 @@ class Weather(commands.Cog):
                 print(f"❌ Error processing weather for {location}: {type(e).__name__}: {e}")
                 import traceback
                 traceback.print_exc()
+            
+            # Add a small delay between locations to avoid rate limiting or message spam
+            import asyncio
+            await asyncio.sleep(2)
 
     @app_commands.command(name="weather", description="Check the weather for a specific location")
     @app_commands.describe(location="City, State or Zip Code")
