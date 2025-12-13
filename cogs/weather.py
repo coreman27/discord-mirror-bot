@@ -125,7 +125,9 @@ class Weather(commands.Cog):
             print(f"❌ Could not find weather channel {config.WEATHER_CHANNEL_ID}")
             return
         
-        # Loop through each location and post weather
+        embeds = []
+        
+        # Loop through each location and collect weather embeds
         for location in self.scheduled_locations:
             print(f"Processing weather for: {location}")
             try:
@@ -134,9 +136,7 @@ class Weather(commands.Cog):
                 if data:
                     print(f"Creating embed for {location}...")
                     embed = self.create_weather_embed(data, location)
-                    print(f"Sending weather message for {location}...")
-                    await channel.send(f"Good morning! Here is the weather for **{location}**:", embed=embed)
-                    print(f"✅ Successfully posted weather for {location}")
+                    embeds.append(embed)
                 else:
                     print(f"❌ Failed to fetch weather data for {location}")
             except Exception as e:
@@ -144,9 +144,19 @@ class Weather(commands.Cog):
                 import traceback
                 traceback.print_exc()
             
-            # Add a small delay between locations to avoid rate limiting or message spam
+            # Add a small delay between requests to avoid rate limiting
             import asyncio
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
+            
+        if embeds:
+            print(f"Sending {len(embeds)} weather embeds...")
+            try:
+                await channel.send("Good morning! Here is the daily weather report:", embeds=embeds)
+                print("✅ Successfully posted daily weather report")
+            except Exception as e:
+                print(f"❌ Error sending weather message: {e}")
+        else:
+            print("❌ No weather data collected to post")
 
     @app_commands.command(name="weather", description="Check the weather for a specific location")
     @app_commands.describe(location="City, State or Zip Code")
