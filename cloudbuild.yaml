@@ -44,7 +44,7 @@ steps:
       - '1'
       - '--no-cpu-throttling'
       - '--memory'
-      - '1Gi'
+      - '1.5Gi'
       - '--service-account'
       - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
       - '--remove-secrets'
