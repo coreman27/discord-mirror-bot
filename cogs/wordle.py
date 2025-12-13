@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord import app_commands
 import config
 import datetime
@@ -16,10 +16,11 @@ except ImportError:
 class Wordle(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.daily_wordle_task.start()
+        # Removed: self.daily_wordle_task.start()
 
     def cog_unload(self):
-        self.daily_wordle_task.cancel()
+        pass
+        # Removed: self.daily_wordle_task.cancel()
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -69,9 +70,9 @@ class Wordle(commands.Cog):
                 print(f"Failed to react to Wordle message: {e}")
                 print(f"Failed to react to Wordle message: {e}")
 
-    # Run daily at 5:00 AM Central Time
-    @tasks.loop(time=datetime.time(hour=5, minute=0, tzinfo=pytz.timezone('US/Central')))
-    async def daily_wordle_task(self):
+    # Run daily at 5:00 AM Central Time (called by Cloud Task via HTTP endpoint)
+    async def run_daily_wordle(self):
+        """Called by HTTP endpoint from Cloud Task scheduler"""
         print(f"Running daily Wordle task at {datetime.datetime.now()}")
         
         if WordleSolver is None:

@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord import app_commands
 import config
 import aiohttp
@@ -16,10 +16,11 @@ class Weather(commands.Cog):
             "Winston-Salem, North Carolina",
             "Plano, Texas"
         ]
-        self.daily_weather_task.start()
+        # Removed: self.daily_weather_task.start()
 
     def cog_unload(self):
-        self.daily_weather_task.cancel()
+        pass
+        # Removed: self.daily_weather_task.cancel()
 
     async def fetch_weather(self, location):
         """Fetches weather data from wttr.in"""
@@ -107,9 +108,9 @@ class Weather(commands.Cog):
         embed.set_footer(text="Powered by wttr.in")
         return embed
 
-    # Run daily at 8:00 AM Central Time
-    @tasks.loop(time=datetime.time(hour=4, minute=0, tzinfo=pytz.timezone('US/Central')))
-    async def daily_weather_task(self):
+    # Run daily at 8:00 AM Central Time (called by Cloud Task via HTTP endpoint)
+    async def run_daily_weather(self):
+        """Called by HTTP endpoint from Cloud Task scheduler"""
         print(f"Running daily weather task at {datetime.datetime.now()}")
         print(f"Scheduled locations: {self.scheduled_locations}")
         

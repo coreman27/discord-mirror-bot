@@ -28,6 +28,46 @@ async def health_check(request):
     """
     return web.Response(text="OK")
 
+async def daily_wordle_endpoint(request):
+    """HTTP endpoint for Cloud Task to trigger daily Wordle solving.
+    
+    Called by Cloud Scheduler → Cloud Task
+    """
+    try:
+        # Get the Wordle cog from the bot
+        wordle_cog = bot.get_cog('Wordle')
+        if not wordle_cog:
+            return web.Response(text="Wordle cog not loaded", status=503)
+        
+        # Call the task handler
+        await wordle_cog.run_daily_wordle()
+        return web.Response(text="OK", status=200)
+    except Exception as e:
+        print(f"Error in daily_wordle_endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.Response(text=f"Error: {str(e)}", status=500)
+
+async def daily_weather_endpoint(request):
+    """HTTP endpoint for Cloud Task to trigger daily weather posting.
+    
+    Called by Cloud Scheduler → Cloud Task
+    """
+    try:
+        # Get the Weather cog from the bot
+        weather_cog = bot.get_cog('Weather')
+        if not weather_cog:
+            return web.Response(text="Weather cog not loaded", status=503)
+        
+        # Call the task handler
+        await weather_cog.run_daily_weather()
+        return web.Response(text="OK", status=200)
+    except Exception as e:
+        print(f"Error in daily_weather_endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.Response(text=f"Error: {str(e)}", status=500)
+
 async def start_server():
     """Start an HTTP server alongside the Discord bot.
     
@@ -37,6 +77,8 @@ async def start_server():
     """
     app = web.Application()  # Create aiohttp web application
     app.router.add_get('/', health_check)  # Register route handler
+    app.router.add_post('/tasks/daily-wordle', daily_wordle_endpoint)  # Wordle task
+    app.router.add_post('/tasks/daily-weather', daily_weather_endpoint)  # Weather task
     runner = web.AppRunner(app)  # Create application runner
     await runner.setup()  # Initialize the runner (async setup)
     # INTERVIEW TOPIC: Network Binding
