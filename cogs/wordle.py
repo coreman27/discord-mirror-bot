@@ -26,16 +26,26 @@ class Wordle(commands.Cog):
     async def on_message(self, message):
         # React to Wordle posts with 💯 and additional reactions
         if "Wordle" in message.content:
+            print(f"Detected Wordle message from {message.author}: {message.content[:20]}...")
             try:
-                await message.add_reaction("100")
+                await message.add_reaction("💯")
                 
                 # Parse the Wordle message for additional reactions
-                lines = message.content.split('\n')
+                lines = message.content.strip().split('\n')
                 if len(lines) < 2:
                     return
                 
-                header = lines[0]
+                # Find the header line (it might not be the first line if there's whitespace)
+                header = None
                 import re
+                for line in lines:
+                    if line.strip().startswith("Wordle"):
+                        header = line.strip()
+                        break
+                
+                if not header:
+                    return
+
                 match = re.search(r'Wordle\s+([\d,]+)\s+([X\d]+)/6\*?', header)
                 if not match:
                     return
@@ -87,26 +97,24 @@ class Wordle(commands.Cog):
         try:
             print("Starting Wordle solver...")
             def _run_solver():
-                s = WordleSolver(headless=True)
+                # Use regular Chrome driver for Cloud Run stability
+                s = WordleSolver(headless=True, use_undetected=False)
                 success = s.solve(max_guesses=6)
-                share_text = None
-                if success:
-                    try:
-                        share_text = s.capture_share_results()
-                    except Exception:
-                        share_text = None
-                return success, share_text
+                # Result is already captured in s.share_text during solve()
+                return success, s.share_text
 
             success, share_text = await asyncio.to_thread(_run_solver)
             
-            if success:
-                if share_text:
-                    await channel.send(f"{share_text}")
+            if share_text:
+                await channel.send(f"{share_text}")
+                if success:
                     print("✅ Successfully posted Wordle result")
                 else:
-                    await channel.send("Daily Wordle solved, but couldn't capture the result.")
+                    print("⚠️ Posted failed Wordle result")
+            elif success:
+                await channel.send("Daily Wordle solved, but couldn't capture the result.")
             else:
-                await channel.send("Failed to solve today's Wordle within 6 guesses.")
+                await channel.send("Failed to solve today's Wordle within 6 guesses and couldn't capture result.")
                 
         except Exception as e:
             print(f"❌ Error in Wordle task: {e}")
@@ -126,23 +134,17 @@ class Wordle(commands.Cog):
             def _run_solver_cmd():
                 s = WordleSolver(headless=True)
                 success = s.solve(max_guesses=6)
-                share_text = None
-                if success:
-                    try:
-                        share_text = s.capture_share_results()
-                    except Exception:
-                        share_text = None
-                return success, share_text
+                # Result is already captured in s.share_text during solve()
+                return success, s.share_text
 
             success, share_text = await asyncio.to_thread(_run_solver_cmd)
             
-            if success:
-                if share_text:
-                    await interaction.followup.send(f"{share_text}")
-                else:
-                    await interaction.followup.send("Wordle solved, but couldn't capture the result.")
+            if share_text:
+                await interaction.followup.send(f"{share_text}")
+            elif success:
+                await interaction.followup.send("Wordle solved, but couldn't capture the result.")
             else:
-                await interaction.followup.send("Failed to solve today's Wordle within 6 guesses.")
+                await interaction.followup.send("Failed to solve today's Wordle within 6 guesses and couldn't capture result.")
                 
         except Exception as e:
             await interaction.followup.send(f"Error: {str(e)[:1000]}")  # Limit length

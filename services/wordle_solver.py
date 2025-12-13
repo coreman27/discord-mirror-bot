@@ -47,6 +47,7 @@ class WordleSolver:
         self.yellow_letters: Set[str] = set()    # Letters in word but wrong position
         self.gray_letters: Set[str] = set()      # Letters not in word
         self.eliminated_positions: Dict[str, Set[int]] = {}  # Letter -> positions where it's NOT
+        self.share_text: Optional[str] = None    # The share text result
         
     def setup_driver(self):
         """Setup Selenium WebDriver"""
@@ -547,10 +548,13 @@ class WordleSolver:
         
         return all_correct
     
-    def capture_share_results(self) -> Optional[str]:
+    def capture_share_results(self, solved: bool = True) -> Optional[str]:
         """
         Capture the game board and convert it to Wordle share format
         
+        Args:
+            solved: Whether the puzzle was solved successfully
+            
         Returns:
             The share text in Wordle format, or None if unable to get it
         """
@@ -559,18 +563,12 @@ class WordleSolver:
             from datetime import datetime
             
             # Extract the game board from the tiles (no need to wait for popups)
-            share_text = self._extract_game_board_emoji()
+            share_text = self._extract_game_board_emoji(solved=solved)
             
             if share_text:
+                self.share_text = share_text
                 # Save to JSON file with metadata
                 try:
-                    results_data = {
-                        "timestamp": datetime.now().isoformat(),
-                        "guesses": self.guesses,
-                        "num_guesses": len(self.guesses),
-                        "share_text": share_text,
-                        "result": "SUCCESS"
-                    }
 
                     # Also save as text
                     with open('wordle_results.txt', 'w', encoding='utf-8') as f:
@@ -590,10 +588,13 @@ class WordleSolver:
             logger.error(f"Error capturing share results: {e}")
             return None
     
-    def _extract_game_board_emoji(self) -> Optional[str]:
+    def _extract_game_board_emoji(self, solved: bool = True) -> Optional[str]:
         """
         Extract the game board tiles and convert them to emoji format
         
+        Args:
+            solved: Whether the puzzle was solved successfully
+            
         Returns:
             String in Wordle share format with header and emoji grid
         """
@@ -655,14 +656,15 @@ class WordleSolver:
             # Format: Wordle {puzzle_number} {num_guesses}/6
             # Then the emoji grid
             num_guesses = len(emoji_rows)
+            guess_count_str = str(num_guesses) if solved else "X"
             
             # Try to extract puzzle number from page (usually in the header or URL)
             puzzle_number = self._get_puzzle_number()
             
-            share_text = f"Wordle {puzzle_number} {num_guesses}/6\n\n"
+            share_text = f"Wordle {puzzle_number} {guess_count_str}/6\n\n"
             share_text += "\n".join(emoji_rows)
             
-            logger.info(f"Extracted game board with {num_guesses} guesses")
+            logger.info(f"Extracted game board with {num_guesses} guesses (Solved: {solved})")
             return share_text
             
         except Exception as e:
@@ -751,16 +753,9 @@ class WordleSolver:
                 if all_correct:
                     logger.info(f"✓ SOLVED in {guess_num} guesses: {best_word}")
                     # Capture and save the share results
-                    self.capture_share_results()
+                    self.capture_share_results(solved=True)
                     return True
-                
-                # Check win state anyway (sometimes feedback might be misleading)
-                if self.check_win_state():
-                    logger.info(f"✓ SOLVED in {guess_num} guesses (detected by win state)")
-                    # Capture and save the share results
-                    self.capture_share_results()
-                    return True
-                
+
                 # Update candidates for next guess
                 candidates = self.filter_candidates(candidates)
                 logger.info(f"Remaining candidates: {len(candidates)}")
@@ -773,6 +768,7 @@ class WordleSolver:
                     logger.info(f"Remaining words: {candidates}")
             
             logger.error(f"Could not solve within {max_guesses} guesses")
+            self.capture_share_results(solved=False)
             return False
             
         except Exception as e:
