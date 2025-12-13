@@ -74,19 +74,35 @@ class WordleSolver:
         """Setup regular Chrome driver"""
         options = Options()
         if self.headless:
-            options.add_argument("--headless")
+            options.add_argument("--headless=new") # Use new headless mode
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
         options.add_argument("--disable-blink-features=AutomationControlled")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option('useAutomationExtension', False)
         
+        # Check for environment variables (Cloud Run / Docker)
+        import os
+        chrome_bin = os.environ.get('CHROME_BIN')
+        chromedriver_path = os.environ.get('CHROMEDRIVER')
+
+        if chrome_bin:
+            options.binary_location = chrome_bin
+
         try:
-            # Try to use the local Chrome installation
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=options)
+            if chromedriver_path and os.path.exists(chromedriver_path):
+                logger.info(f"Using configured ChromeDriver at {chromedriver_path}")
+                service = Service(executable_path=chromedriver_path)
+                self.driver = webdriver.Chrome(service=service, options=options)
+            else:
+                # Try to use the local Chrome installation
+                logger.info("Using ChromeDriverManager to install driver")
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=options)
         except Exception as e:
-            logger.warning(f"Failed with ChromeDriverManager: {e}")
+            logger.warning(f"Failed with primary method: {e}")
             # Fallback: try to find Chrome in common locations
             import subprocess
             import os
@@ -132,12 +148,44 @@ class WordleSolver:
         self.driver.get("https://www.nytimes.com/games/wordle/")
         time.sleep(3)  # Wait for page to load
         
+        # Dismiss cookie banner if present
+        self.dismiss_cookie_banner()
+        
         # Click play button if present
         self.click_play_button()
         
         # Try to dismiss any popups including rules
         self.dismiss_popups()
     
+    def dismiss_cookie_banner(self):
+        """Dismiss the NYT cookie banner if it appears"""
+        try:
+            logger.info("Checking for cookie banner...")
+            # Common selectors for cookie banners
+            selectors = [
+                "button[data-testid='GDPR-accept']",
+                "button[id='onetrust-accept-btn-handler']",
+                "button.purr-blocker-card__button",
+                "button[aria-label='Accept']",
+                "button[aria-label='Agree']",
+                "button:contains('Accept')",
+                "button:contains('Continue')"
+            ]
+            
+            for selector in selectors:
+                try:
+                    elements = self.driver.find_elements(By.CSS_SELECTOR, selector)
+                    for element in elements:
+                        if element.is_displayed():
+                            logger.info(f"Found cookie banner button: {selector}")
+                            element.click()
+                            time.sleep(1)
+                            return
+                except:
+                    pass
+        except Exception as e:
+            logger.warning(f"Error checking cookie banner: {e}")
+
     def click_play_button(self):
         """Click the play button to start the game"""
         try:
@@ -384,14 +432,15 @@ class WordleSolver:
             Format: {'tiles': [('letter', 'correct'|'present'|'absent'), ...]}
         """
         try:
-            # Wait for tiles to update and animate
-            time.sleep(2.5)
+            # Wait for tiles to update and animate (increased for Cloud Run)
+            time.sleep(5.5)
             
             # Get all rows
             rows = self.driver.find_elements(By.CSS_SELECTOR, "div[role='group'][aria-label*='Row']")
             
             if not rows:
-                logger.warning("Could not find any rows")
+                logger.warning("Could not find any rows. Page source snippet:")
+                logger.warning(self.driver.page_source[:1000])
                 return None
             
             logger.info(f"Found {len(rows)} rows total")
@@ -410,7 +459,9 @@ class WordleSolver:
                 # If no guess number specified, find the first row with completed feedback
                 for row in rows:
                     tiles_with_state = row.find_elements(By.CSS_SELECTOR, "[data-testid='tile'][data-state]")
-                    if len(tiles_with_state) == 5:
+                    # Filter out empty/tbd states
+                    valid_tiles = [t for t in tiles_with_state if t.get_attribute("data-state") not in ['empty', 'tbd']]
+                    if len(valid_tiles) == 5:
                         target_row = row
             
             if not target_row:
@@ -430,14 +481,20 @@ class WordleSolver:
                     # Get the state attribute (correct, present, absent)
                     state = tile.get_attribute("data-state")
                     
+                    # Wait for state to populate if it's empty/tbd
+                    if not state or state in ['empty', 'tbd']:
+                        logger.info(f"Tile {position} state is '{state}', waiting...")
+                        time.sleep(1)
+                        state = tile.get_attribute("data-state")
+                    
                     # Get the letter from text content
                     letter = tile.text.strip().lower()
                     
-                    if letter and state:
+                    if letter and state and state not in ['empty', 'tbd']:
                         feedback.append((letter, state))
                         logger.info(f"Letter '{letter}': {state}")
                     else:
-                        logger.warning(f"Could not get letter or state from tile at position {position}")
+                        logger.warning(f"Could not get valid letter/state from tile {position}: letter='{letter}', state='{state}'")
                 except Exception as tile_error:
                     logger.warning(f"Failed to process tile: {tile_error}")
                     pass
@@ -450,6 +507,7 @@ class WordleSolver:
                 
         except Exception as e:
             logger.error(f"Failed to get feedback: {e}")
+            return None
             return None
     
     def process_feedback(self, word: str, feedback: Dict) -> bool:
