@@ -10,7 +10,6 @@ resource "google_cloud_tasks_queue" "discord_bot_queue" {
 
   retry_config {
     max_attempts       = 5
-    max_retries        = 3
     max_backoff        = "3600s"
     min_backoff        = "10s"
     max_doublings      = 5
