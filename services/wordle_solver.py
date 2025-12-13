@@ -635,9 +635,9 @@ class WordleSolver:
                         elif state == "present":
                             row_emoji += "🟨"
                         elif state == "absent":
-                            row_emoji += "⬜"
-                        else:
                             row_emoji += "⬛"
+                        else:
+                            row_emoji += "⬜"
                     else:
                         # Empty tile, not part of a guess
                         has_content = False
