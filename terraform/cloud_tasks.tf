@@ -1,9 +1,3 @@
-# Data source to reference the existing Cloud Run service deployed via gcloud
-data "google_cloud_run_service" "discord_bot" {
-  name     = "discord-mirror"
-  location = var.region
-}
-
 # Cloud Task Queue for scheduled tasks
 resource "google_cloud_tasks_queue" "discord_bot_queue" {
   name     = "discord-bot-tasks"
@@ -34,11 +28,11 @@ resource "google_cloud_scheduler_job" "daily_wordle" {
   
   http_target {
     http_method = "POST"
-    uri         = "${google_cloud_run_service.discord_bot.status[0].url}/tasks/daily-wordle"
+    uri         = "https://discord-mirror-${var.region}.run.app/tasks/daily-wordle"
     
     oidc_token {
       service_account_email = google_service_account.discord_bot.email
-      audience              = google_cloud_run_service.discord_bot.status[0].url
+      audience              = "https://discord-mirror-${var.region}.run.app"
     }
     
     headers = {
@@ -58,11 +52,11 @@ resource "google_cloud_scheduler_job" "daily_weather" {
   
   http_target {
     http_method = "POST"
-    uri         = "${google_cloud_run_service.discord_bot.status[0].url}/tasks/daily-weather"
+    uri         = "https://discord-mirror-${var.region}.run.app/tasks/daily-weather"
     
     oidc_token {
       service_account_email = google_service_account.discord_bot.email
-      audience              = google_cloud_run_service.discord_bot.status[0].url
+      audience              = "https://discord-mirror-${var.region}.run.app"
     }
     
     headers = {

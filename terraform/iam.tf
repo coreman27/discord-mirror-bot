@@ -35,7 +35,7 @@ resource "google_secret_manager_secret_iam_member" "build_access_gemini" {
 
 # Grant Cloud Scheduler's default service account permission to invoke Cloud Run
 resource "google_cloud_run_service_iam_member" "scheduler_invoker" {
-  service  = data.google_cloud_run_service.discord_bot.name
+  service  = "discord-mirror"
   location = var.region
   role     = "roles/run.invoker"
   member   = "serviceAccount:${google_service_account.discord_bot.email}"
