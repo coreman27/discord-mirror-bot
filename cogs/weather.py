@@ -5,6 +5,7 @@ import config
 import aiohttp
 import datetime
 import pytz
+import asyncio
 
 class Weather(commands.Cog):
     def __init__(self, bot):
@@ -27,12 +28,19 @@ class Weather(commands.Cog):
         import urllib.parse
         encoded_location = urllib.parse.quote(location)
         url = f"https://wttr.in/{encoded_location}?format=j1"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
         
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
                     if response.status == 200:
-                        return await response.json()
+                        try:
+                            return await response.json()
+                        except aiohttp.ContentTypeError:
+                            print(f"⚠️ Failed to parse JSON for {location}. Response might be HTML.")
+                            return None
                     else:
                         print(f"⚠️ Failed to fetch weather for {location}: Status {response.status}")
                         return None
@@ -145,7 +153,6 @@ class Weather(commands.Cog):
                 traceback.print_exc()
             
             # Add a small delay between requests to avoid rate limiting
-            import asyncio
             await asyncio.sleep(1)
             
         if embeds:
@@ -154,7 +161,14 @@ class Weather(commands.Cog):
                 await channel.send("Good morning! Here is the daily weather report:", embeds=embeds)
                 print("✅ Successfully posted daily weather report")
             except Exception as e:
-                print(f"❌ Error sending weather message: {e}")
+                print(f"❌ Error sending bulk weather message: {e}")
+                print("⚠️ Falling back to sending individual messages...")
+                for i, embed in enumerate(embeds):
+                    try:
+                        await channel.send(f"Weather for **{self.scheduled_locations[i]}**:", embed=embed)
+                        await asyncio.sleep(1)
+                    except Exception as inner_e:
+                        print(f"❌ Failed to send individual embed: {inner_e}")
         else:
             print("❌ No weather data collected to post")
 
