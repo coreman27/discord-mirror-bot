@@ -4,8 +4,8 @@ from discord import app_commands
 import config
 import aiohttp
 import datetime
-import pytz
 import asyncio
+import time
 
 class Weather(commands.Cog):
     def __init__(self, bot):
@@ -31,48 +31,74 @@ class Weather(commands.Cog):
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    if response.status == 200:
+        # Retry with exponential backoff on transient errors
+        attempts = 3
+        backoff = 1
+        for attempt in range(1, attempts + 1):
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10), allow_redirects=True) as response:
+                        status = response.status
+                        if status != 200:
+                            text = await response.text()
+                            print(f"⚠️ Attempt {attempt}: Failed to fetch weather for {location}: Status {status}. Response snippet: {text[:300]!r}")
+                            # Retry for 5xx server errors
+                            if 500 <= status < 600 and attempt < attempts:
+                                await asyncio.sleep(backoff)
+                                backoff *= 2
+                                continue
+                            return None
+
                         try:
                             return await response.json()
                         except aiohttp.ContentTypeError:
-                            print(f"⚠️ Failed to parse JSON for {location}. Response might be HTML.")
+                            text = await response.text()
+                            print(f"⚠️ Attempt {attempt}: Failed to parse JSON for {location}. Response might be HTML. Snippet: {text[:300]!r}")
                             return None
-                    else:
-                        print(f"⚠️ Failed to fetch weather for {location}: Status {response.status}")
-                        return None
-        except Exception as e:
-            print(f"❌ Error fetching weather for {location}: {e}")
-            return None
+            except Exception as e:
+                # Use repr(e) to capture empty/exotic exception messages
+                print(f"❌ Attempt {attempt}: Error fetching weather for {location}: {repr(e)}")
+                if attempt < attempts:
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
+                    continue
+                return None
 
     def create_weather_embed(self, data, location):
         """Creates a nice embed from wttr.in JSON data"""
-        current = data['current_condition'][0]
-        weather_desc = current['weatherDesc'][0]['value']
-        temp_f = current['temp_F']
-        feels_like_f = current['FeelsLikeF']
-        humidity = current['humidity']
-        wind_speed = current['windspeedMiles']
-        
-        # Get daily forecast for today
-        today = data['weather'][0]
-        max_temp = today['maxtempF']
-        min_temp = today['mintempF']
-        date_str = today['date']  # Format: YYYY-MM-DD
-        
-        # Format date as "Monday, December 8, 2025"
-        date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
-        formatted_date = date_obj.strftime('%A, %B %d, %Y')
-        
-        embed = discord.Embed(
-            title=f"🌤️ Weather for {location}",
-            description=f"**{formatted_date}**\n*{weather_desc}*",
-            color=discord.Color.blue(),
-            timestamp=datetime.datetime.now()
-        )
+        try:
+            current = data.get('current_condition', [])[0]
+            weather_desc = current.get('weatherDesc', [{}])[0].get('value', 'N/A')
+            temp_f = current.get('temp_F', 'N/A')
+            feels_like_f = current.get('FeelsLikeF', 'N/A')
+            humidity = current.get('humidity', 'N/A')
+            wind_speed = current.get('windspeedMiles', 'N/A')
+
+            # Get daily forecast for today
+            today = data.get('weather', [])[0]
+            max_temp = today.get('maxtempF', 'N/A')
+            min_temp = today.get('mintempF', 'N/A')
+            date_str = today.get('date', '')  # Format: YYYY-MM-DD
+
+            # Format date as "Monday, December 8, 2025" if available
+            if date_str:
+                try:
+                    date_obj = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+                    formatted_date = date_obj.strftime('%A, %B %d, %Y')
+                except Exception:
+                    formatted_date = date_str
+            else:
+                formatted_date = 'Today'
+
+            embed = discord.Embed(
+                title=f"🌤️ Weather for {location}",
+                description=f"**{formatted_date}**\n*{weather_desc}*",
+                color=discord.Color.blue(),
+                timestamp=datetime.datetime.now(datetime.timezone.utc)
+            )
+        except Exception as e:
+            print(f"❌ Error creating embed for {location}: {e}")
+            raise
         
         # Current conditions section
         embed.add_field(
@@ -94,10 +120,29 @@ class Weather(commands.Cog):
         
         # Helper to find closest hour
         def get_forecast(time_str):
+            # wttr.in hourly 'time' values are often '0','300','600','900','1200' etc.
+            # Attempt an exact match first, otherwise pick the closest hour available.
             for h in hourly:
-                if h['time'] == time_str:
+                if str(h.get('time', '')) == str(time_str):
                     return h
-            return None
+
+            try:
+                target = int(time_str)
+            except Exception:
+                return None
+
+            best = None
+            best_diff = None
+            for h in hourly:
+                try:
+                    t = int(h.get('time', 0))
+                except Exception:
+                    continue
+                diff = abs(t - target)
+                if best is None or diff < best_diff:
+                    best = h
+                    best_diff = diff
+            return best
 
         periods = [
             ("🌅 Morning (9AM)", "900"),

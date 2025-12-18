@@ -314,8 +314,14 @@ class WordleSolver:
         filtered = []
         
         for word in candidates:
-            # Check if word contains any gray letters
-            if any(letter in word for letter in self.gray_letters):
+            # Compute effective gray letters: exclude letters that we've since marked green/yellow
+            effective_gray = set(self.gray_letters) - set(self.yellow_letters) - set(self.green_letters.values())
+            # If a letter appears in both green and gray, suppress the gray so it doesn't eliminate candidates
+            suppressed_grays = set(self.gray_letters) & set(self.green_letters.values())
+            if suppressed_grays:
+                logger.debug(f"Suppressing gray letters present in greens: {suppressed_grays}")
+            # Check if word contains any gray letters (after excluding current greens/yellows)
+            if any(letter in word for letter in effective_gray):
                 continue
             
             # Check if all green letters are in correct positions
@@ -523,29 +529,74 @@ class WordleSolver:
             True if all letters are correct (green), False otherwise
         """
         tiles = feedback.get('tiles', [])
-        
+
         if len(tiles) != 5:
             logger.warning(f"Invalid feedback, expected 5 tiles, got {len(tiles)}")
             return False
-        
-        all_correct = True
-        
+
+        # Aggregate states per letter to handle duplicate-letter contradictions
+        letter_states = {}
         for position, (letter, state) in enumerate(tiles):
+            if not letter:
+                continue
+            info = letter_states.setdefault(letter, {"correct": set(), "present": set(), "absent": set(), "positions": {}})
+            info["positions"][position] = state
             if state == "correct":
-                self.green_letters[position] = letter
-                logger.info(f"Position {position}: {letter} is CORRECT")
+                info["correct"].add(position)
             elif state == "present":
+                info["present"].add(position)
+            else:
+                info["absent"].add(position)
+
+        all_correct = True
+
+        # Debug: log aggregated letter states for troubleshooting duplicate-letter handling
+        try:
+            logger.debug(f"Aggregated letter states: { {k: { 'correct': list(v['correct']), 'present': list(v['present']), 'absent': list(v['absent']), 'positions': v['positions'] } for k,v in letter_states.items()} }")
+        except Exception:
+            pass
+
+        # If a letter has both correct/present and absent markers (due to reading timing),
+        # ignore the absent markers — prioritize correct/present.
+        for letter, info in letter_states.items():
+            if info['correct'] or info['present']:
+                info['absent'] = set()
+
+        print('DBG PF PASS 1 START')
+        # Pass 1: Assign greens for all letters
+        for letter, info in letter_states.items():
+            for pos in info["correct"]:
+                self.green_letters[pos] = letter
+                logger.info(f"Position {pos}: {letter} is CORRECT")
+
+        print('DBG PF PASS 2 START')
+        # Pass 2: Assign presents (yellows) and eliminated positions
+        for letter, info in letter_states.items():
+            if info["present"]:
                 self.yellow_letters.add(letter)
                 if letter not in self.eliminated_positions:
                     self.eliminated_positions[letter] = set()
-                self.eliminated_positions[letter].add(position)
-                logger.info(f"Letter {letter} is in word but not at position {position}")
-                all_correct = False
-            elif state == "absent":
-                self.gray_letters.add(letter)
-                logger.info(f"Letter {letter} is not in word")
-                all_correct = False
-        
+                for pos in info["present"]:
+                    self.eliminated_positions[letter].add(pos)
+                    logger.info(f"Letter {letter} is in word but not at position {pos}")
+
+        print('DBG PF PASS 3 START')
+        # Pass 3: Mark global absent letters only if they have no correct or present occurrences
+        for letter, info in letter_states.items():
+            if info["absent"] and not info["correct"] and not info["present"]:
+                # Only add to gray if not found as green/present elsewhere
+                if (letter not in set(self.green_letters.values())) and (letter not in self.yellow_letters):
+                    self.gray_letters.add(letter)
+                    logger.info(f"Letter {letter} is not in word")
+                else:
+                    logger.debug(f"Suppressed global gray for {letter} due to greens/presents detected")
+
+        # Determine if all positions for every letter are correct
+        for letter, info in letter_states.items():
+            for pos, st in info["positions"].items():
+                if st != "correct":
+                    all_correct = False
+
         return all_correct
     
     def capture_share_results(self, solved: bool = True) -> Optional[str]:
@@ -740,6 +791,14 @@ class WordleSolver:
                 if not self.make_guess(best_word):
                     logger.error("Failed to make guess")
                     return False
+
+                # Remove the guessed word from candidates so we don't guess it again
+                try:
+                    if best_word in candidates:
+                        candidates.remove(best_word)
+                        logger.debug(f"Removed guessed word from candidates: {best_word}")
+                except Exception:
+                    pass
                 
                 # Get feedback from the correct row (using guess_num)
                 feedback = self.get_guess_feedback(guess_number=guess_num)
