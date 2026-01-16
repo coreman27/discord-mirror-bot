@@ -35,13 +35,19 @@ class Weather(commands.Cog):
         attempts = 3
         backoff = 1
         for attempt in range(1, attempts + 1):
+            start_time = time.time()
             try:
                 async with aiohttp.ClientSession() as session:
-                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=10), allow_redirects=True) as response:
+                    async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=20), allow_redirects=True) as response:
+                        elapsed = time.time() - start_time
                         status = response.status
+                        content_type = response.headers.get('Content-Type', 'unknown')
+                        
+                        print(f"🔍 Attempt {attempt} for {location}: Status={status}, Content-Type={content_type}, Time={elapsed:.2f}s")
+                        
                         if status != 200:
                             text = await response.text()
-                            print(f"⚠️ Attempt {attempt}: Failed to fetch weather for {location}: Status {status}. Response snippet: {text[:300]!r}")
+                            print(f"⚠️ Attempt {attempt}: Failed to fetch weather for {location}: Status {status}. Response snippet: {text[:500]!r}")
                             # Retry for 5xx server errors
                             if 500 <= status < 600 and attempt < attempts:
                                 await asyncio.sleep(backoff)
@@ -49,15 +55,48 @@ class Weather(commands.Cog):
                                 continue
                             return None
 
+                        # Check if we got JSON content-type
+                        if 'application/json' not in content_type.lower():
+                            text = await response.text()
+                            print(f"⚠️ Attempt {attempt}: Unexpected content-type '{content_type}' for {location}. Response snippet: {text[:500]!r}")
+                            # Retry on HTML responses as wttr.in might be having issues
+                            if attempt < attempts:
+                                await asyncio.sleep(backoff)
+                                backoff *= 2
+                                continue
+                            return None
+
                         try:
                             return await response.json()
-                        except aiohttp.ContentTypeError:
+                        except (aiohttp.ContentTypeError, ValueError) as json_err:
                             text = await response.text()
-                            print(f"⚠️ Attempt {attempt}: Failed to parse JSON for {location}. Response might be HTML. Snippet: {text[:300]!r}")
+                            print(f"⚠️ Attempt {attempt}: Failed to parse JSON for {location} ({type(json_err).__name__}). Response snippet: {text[:500]!r}")
+                            # Retry JSON parse errors
+                            if attempt < attempts:
+                                await asyncio.sleep(backoff)
+                                backoff *= 2
+                                continue
                             return None
+                            
+            except asyncio.TimeoutError:
+                elapsed = time.time() - start_time
+                print(f"⏱️ Attempt {attempt}: TIMEOUT after {elapsed:.2f}s fetching weather for {location}")
+                if attempt < attempts:
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
+                    continue
+                return None
+            except aiohttp.ClientError as e:
+                elapsed = time.time() - start_time
+                print(f"🌐 Attempt {attempt}: Network error after {elapsed:.2f}s for {location}: {type(e).__name__}: {e}")
+                if attempt < attempts:
+                    await asyncio.sleep(backoff)
+                    backoff *= 2
+                    continue
+                return None
             except Exception as e:
-                # Use repr(e) to capture empty/exotic exception messages
-                print(f"❌ Attempt {attempt}: Error fetching weather for {location}: {repr(e)}")
+                elapsed = time.time() - start_time
+                print(f"❌ Attempt {attempt}: Unexpected error after {elapsed:.2f}s for {location}: {type(e).__name__}: {repr(e)}")
                 if attempt < attempts:
                     await asyncio.sleep(backoff)
                     backoff *= 2
