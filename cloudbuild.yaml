@@ -4,7 +4,7 @@ steps:
     dir: 'terraform'
     args: ['init']
 
-  # Terraform Apply
+  # Terraform Apply - Will destroy resources since they're all commented out
   - name: 'hashicorp/terraform:light'
     dir: 'terraform'
     args: 
@@ -14,48 +14,49 @@ steps:
       - '-var=github_owner=coreman27'
       - '-var=github_repo=discord-mirror-bot'
 
-  # Build the container image
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '--network=cloudbuild', '-t', 'gcr.io/$PROJECT_ID/discord-mirror', '.']
-  
-  # Push the container image to Container Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/discord-mirror']
+  # COMMENTED OUT - Uncomment to stand back up
+  # # Build the container image
+  # - name: 'gcr.io/cloud-builders/docker'
+  #   args: ['build', '--network=cloudbuild', '-t', 'gcr.io/$PROJECT_ID/discord-mirror', '.']
+  # 
+  # # Push the container image to Container Registry
+  # - name: 'gcr.io/cloud-builders/docker'
+  #   args: ['push', 'gcr.io/$PROJECT_ID/discord-mirror']
+  #
+  # # Deploy container to Cloud Run
+  # # Note: We use --no-allow-unauthenticated because this isn't a web server
+  # # We use --min-instances 1 and --max-instances 1 to keep exactly 1 instance running (Discord bots need to stay connected)
+  # - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  #   entrypoint: gcloud
+  #   args:
+  #     - 'run'
+  #     - 'deploy'
+  #     - 'discord-mirror'
+  #     - '--image'
+  #     - 'gcr.io/$PROJECT_ID/discord-mirror'
+  #     - '--region'
+  #     - 'us-central1'
+  #     - '--platform'
+  #     - 'managed'
+  #     - '--no-allow-unauthenticated'
+  #     - '--min-instances'
+  #     - '1'
+  #     - '--max-instances'
+  #     - '1'
+  #     - '--no-cpu-throttling'
+  #     - '--memory'
+  #     - '1.5Gi'
+  #     - '--service-account'
+  #     - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
+  #     - '--remove-secrets'
+  #     - 'SOURCE_CHANNEL_ID,DESTINATION_CHANNEL_ID,MIRROR_SOURCE_CHANNEL_ID,MIRROR_DEST_CHANNEL_ID'
+  #     - '--set-env-vars'
+  #     - 'MIRROR_SOURCE_CHANNEL_ID=1442922478434390037,MIRROR_DEST_CHANNEL_ID=1446216130611122367,WEATHER_CHANNEL_ID=834901032273182800,WORDLE_CHANNEL_ID=813092906772594710,ADMIN_USER_ID=313893805000753154,AEAERON_USER_ID=102249538739245056,GUILD_ID=317792867953278976'
+  #     - '--update-secrets'
+  #     - 'DISCORD_TOKEN=discord-token:latest,GEMINI_API_KEY=gemini-api-key:latest'
 
-  # Deploy container to Cloud Run
-  # Note: We use --no-allow-unauthenticated because this isn't a web server
-  # We use --min-instances 1 and --max-instances 1 to keep exactly 1 instance running (Discord bots need to stay connected)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: gcloud
-    args:
-      - 'run'
-      - 'deploy'
-      - 'discord-mirror'
-      - '--image'
-      - 'gcr.io/$PROJECT_ID/discord-mirror'
-      - '--region'
-      - 'us-central1'
-      - '--platform'
-      - 'managed'
-      - '--no-allow-unauthenticated'
-      - '--min-instances'
-      - '1'
-      - '--max-instances'
-      - '1'
-      - '--no-cpu-throttling'
-      - '--memory'
-      - '1.5Gi'
-      - '--service-account'
-      - 'discord-mirror-bot@$PROJECT_ID.iam.gserviceaccount.com'
-      - '--remove-secrets'
-      - 'SOURCE_CHANNEL_ID,DESTINATION_CHANNEL_ID,MIRROR_SOURCE_CHANNEL_ID,MIRROR_DEST_CHANNEL_ID'
-      - '--set-env-vars'
-      - 'MIRROR_SOURCE_CHANNEL_ID=1442922478434390037,MIRROR_DEST_CHANNEL_ID=1446216130611122367,WEATHER_CHANNEL_ID=834901032273182800,WORDLE_CHANNEL_ID=813092906772594710,ADMIN_USER_ID=313893805000753154,AEAERON_USER_ID=102249538739245056,GUILD_ID=317792867953278976'
-      - '--update-secrets'
-      - 'DISCORD_TOKEN=discord-token:latest,GEMINI_API_KEY=gemini-api-key:latest'
-
-images:
-  - 'gcr.io/$PROJECT_ID/discord-mirror'
+# images:
+#   - 'gcr.io/$PROJECT_ID/discord-mirror'
 
 options:
   logging: CLOUD_LOGGING_ONLY
