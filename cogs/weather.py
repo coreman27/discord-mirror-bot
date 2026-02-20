@@ -59,7 +59,7 @@ class Weather(commands.Cog):
                         if 'application/json' not in content_type.lower():
                             text = await response.text()
                             print(f"⚠️ Attempt {attempt}: Unexpected content-type '{content_type}' for {location}. Response snippet: {text[:500]!r}")
-                            # Retry on HTML responses as wttr.in might be having issues
+                        # Retry on HTML responses as wttr.in might be having issues
                             if attempt < attempts:
                                 await asyncio.sleep(backoff)
                                 backoff *= 2
